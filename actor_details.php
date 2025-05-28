@@ -1,0 +1,260 @@
+<?php
+include 'header.php';
+
+$personId = $_GET['id']; // Get the person ID from the query parameter
+
+// TMDB API configuration
+$apiKey = "b252ff5aa4b7f8186389adf7e546e29c";
+$baseUrl = "https://api.themoviedb.org/3/";
+
+// API endpoints and parameters
+$personEndpoint = "person/$personId";
+$creditsEndpoint = "person/$personId/combined_credits";
+
+// Parameters for both endpoints
+$parameters = array(
+    "api_key" => $apiKey,
+    "language" => "en-US"
+);
+
+// Build the request URLs
+$personUrl = $baseUrl . $personEndpoint . "?" . http_build_query($parameters);
+$creditsUrl = $baseUrl . $creditsEndpoint . "?" . http_build_query($parameters);
+
+// Initialize cURL for person details request
+$personCurl = curl_init($personUrl);
+curl_setopt($personCurl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($personCurl, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification
+
+// Initialize cURL for movie credits request
+$creditsCurl = curl_init($creditsUrl);
+curl_setopt($creditsCurl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($creditsCurl, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification
+
+// Create a multi-handle to process both requests simultaneously
+$multiHandle = curl_multi_init();
+curl_multi_add_handle($multiHandle, $personCurl);
+curl_multi_add_handle($multiHandle, $creditsCurl);
+
+// Execute the requests
+$running = null;
+do {
+    curl_multi_exec($multiHandle, $running);
+} while ($running);
+
+// Get the person details response
+$personResponse = curl_multi_getcontent($personCurl);
+// Get the movie credits response
+$creditsResponse = curl_multi_getcontent($creditsCurl);
+
+// Close cURL handles
+curl_multi_remove_handle($multiHandle, $personCurl);
+curl_multi_remove_handle($multiHandle, $creditsCurl);
+curl_multi_close($multiHandle);
+
+// Process the person details response
+$personData = json_decode($personResponse, true);
+// Process the movie credits response
+$creditsData = json_decode($creditsResponse, true);
+
+$moviesActed = $creditsData['cast'];
+$moviesDirected = []; // Initialize as an empty array
+
+// Filter movies directed by the person
+foreach ($creditsData['crew'] as $movie) {
+    if ($movie['job'] === 'Director') {
+        $moviesDirected[] = $movie;
+    }
+}
+
+?>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="Awards.css">
+    <style>
+        body {
+            background-color: #454848;
+            font-family: 'Roboto', sans-serif;
+            font-size: 10px;
+            box-sizing: border-box;
+            align-items: left;
+            justify-content: left;
+        }
+
+        body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        body::-webkit-scrollbar-track {
+            box-shadow: inset 0 0 5px grey;
+            border-radius: 10px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: white;
+            border-radius: 10px;
+        }
+
+        section {
+            width: 100%;
+            height: 100%;
+            background-color: #1F1F1F;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            padding: 1.3rem;
+            margin: 0 auto;
+            box-sizing: border-box;
+            background-color: #282828;
+            border-radius: 10px;
+            color: #FFFFFF;
+            display: flex;
+            flex-wrap: wrap; /* Added flex-wrap to allow wrapping on smaller screens */
+            justify-content: space-between; /* Added justify-content to space out the elements */
+            padding-top:5rem;
+        }
+
+        .container h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .container img {
+            max-width: 300px;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            padding-top: 5rem;
+        }
+
+        .actor-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            flex: 1;
+            padding-left: 2rem;
+            margin-right: 2rem; /* Added margin-right to create space between the actor details and the image */
+        }
+
+        .container p {
+            line-height: 1.5;
+            max-width: 500px;
+            display: flex;
+        }
+
+        .container .movie-list {
+            width: 100%;
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-gap: 1rem;
+        }
+
+        .container .movie-list h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .container .movie-list .movie {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .container .movie-list .movie img {
+            width: 80px;
+            height: auto;
+            border-radius: 5px;
+            margin-right: 1rem;
+        }
+
+        .container .movie-list .movie .movie-details {
+            flex: 1;
+        }
+
+        .container .movie-list .movie .movie-details p {
+            margin: 0;
+        }
+    </style>    
+</head>
+<body>
+<section>
+    <div class="container">
+        <img src="https://image.tmdb.org/t/p/w500/<?php echo $personData['profile_path']; ?>" alt="Person Image">
+
+        <div class="person-details">
+            <h1><?php echo $personData['name']; ?></h1>
+            <?php if ($personData['known_for_department'] == 'Acting') : ?>
+                <h3>Actor</h3>
+                <p><?php echo $personData['biography']; ?></p>
+            <?php elseif ($personData['known_for_department'] == 'Directing') : ?>
+                <h3>Director</h3>
+                <p><?php echo $personData['biography']; ?></p>
+            <?php else : ?>
+                <h3>Person</h3>
+                <p><?php echo $personData['biography']; ?></p>
+            <?php endif; ?>
+        </div>
+
+        <div class="movie-list">
+            <?php if ($personData['known_for_department'] == 'Acting') : ?>
+                <h2>Acting in:</h2>
+                <?php foreach ($moviesActed as $movie) : ?>
+                    <?php if (isset($movie['poster_path'])) : ?>
+                        <div class="movie">
+                            <a href="movie_details.php?id=<?php echo $movie['id']; ?>">
+                                <img src="https://image.tmdb.org/t/p/w200/<?php echo $movie['poster_path']; ?>" alt="Movie Poster">
+                            </a>
+                            <div class="movie-details">
+                                <?php if ($movie['media_type'] === 'movie') : ?>
+                                    <p>Title: <?php echo $movie['title']; ?></p>
+                                    <p>Release Date: <?php echo $movie['release_date']; ?></p>
+                                <?php elseif ($movie['media_type'] === 'tv') : ?>
+                                    <p>Title: <?php echo $movie['name']; ?></p>
+                                    <p>First Air Date: <?php echo $movie['first_air_date']; ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+
+            <?php elseif ($personData['known_for_department'] == 'Directing') : ?>
+                <h2>Movies Directed:</h2>
+                <?php foreach ($moviesDirected as $movie) : ?>
+                    <?php if (isset($movie['poster_path'])) : ?>
+                        <div class="movie">
+                            <a href="movie_details.php?id=<?php echo $movie['id']; ?>">
+                                <img src="https://image.tmdb.org/t/p/w200/<?php echo $movie['poster_path']; ?>" alt="Movie Poster">
+                            </a>
+                            <div class="movie-details">
+                                <?php if ($movie['media_type'] === 'movie') : ?>
+                                    <p>Title: <?php echo $movie['title']; ?></p>
+                                    <p>Release Date: <?php echo $movie['release_date']; ?></p>
+                                <?php elseif ($movie['media_type'] === 'tv') : ?>
+                                    <p>Title: <?php echo $movie['name']; ?></p>
+                                    <p>First Air Date: <?php echo $movie['first_air_date']; ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php else : ?>
+                <h2>Movies:</h2>
+                <!-- Display other movies or customize as needed -->
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+</body>
+</html>
