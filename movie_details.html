@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>movie_details.php</title>
+    <link rel="stylesheet" href="Awards.css">
+</head>
+<body>
+<?php
+// Begin PHP logic from movie_details.php
+?>
+<?php
+include 'header.php';
+
+$movieId = $_GET['id']; // Get the movie ID from the query parameter
+
+// TMDB API configuration
+$apiKey = "b252ff5aa4b7f8186389adf7e546e29c";
+$baseUrl = "https://api.themoviedb.org/3/";
+
+// API endpoints and parameters
+$movieEndpoint = "movie/$movieId";
+$creditsEndpoint = "movie/$movieId/credits";
+$recommendationsEndpoint = "movie/$movieId/recommendations"; // Add recommendations endpoint
+$parameters = array(
+    "api_key" => $apiKey,
+    "language" => "en-US"
+);
+
+// Build the request URLs
+$movieUrl = $baseUrl . $movieEndpoint . "?" . http_build_query($parameters);
+$creditsUrl = $baseUrl . $creditsEndpoint . "?" . http_build_query($parameters);
+$recommendationsUrl = $baseUrl . $recommendationsEndpoint . "?" . http_build_query($parameters); // Build recommendations URL
+
+// Initialize cURL for movie details request
+$movieCurl = curl_init($movieUrl);
+curl_setopt($movieCurl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($movieCurl, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification
+
+// Initialize cURL for credits request
+$creditsCurl = curl_init($creditsUrl);
+curl_setopt($creditsCurl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($creditsCurl, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification
+
+// Initialize cURL for recommendations request
+$recommendationsCurl = curl_init($recommendationsUrl);
+curl_setopt($recommendationsCurl, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($recommendationsCurl, CURLOPT_SSL_VERIFYPEER, false); // Disable SSL verification
+
+// Create a multi-handle to process all requests simultaneously
+$multiHandle = curl_multi_init();
+curl_multi_add_handle($multiHandle, $movieCurl);
+curl_multi_add_handle($multiHandle, $creditsCurl);
+curl_multi_add_handle($multiHandle, $recommendationsCurl);
+
+// Execute the requests
+$running = null;
+do {
+    curl_multi_exec($multiHandle, $running);
+} while ($running);
+
+// Get the movie details response
+$movieResponse = curl_multi_getcontent($movieCurl);
+// Get the credits response
+$creditsResponse = curl_multi_getcontent($creditsCurl);
+// Get the recommendations response
+$recommendationsResponse = curl_multi_getcontent($recommendationsCurl);
+
+// Close cURL handles
+curl_multi_remove_handle($multiHandle, $movieCurl);
+curl_multi_remove_handle($multiHandle, $creditsCurl);
+curl_multi_remove_handle($multiHandle, $recommendationsCurl);
+curl_multi_close($multiHandle);
+
+// Process the movie details response
+$movieData = json_decode($movieResponse, true);
+// Process the credits response
+$creditsData = json_decode($creditsResponse, true);
+
+$directors = array_filter($creditsData['crew'], function($crewMember) {
+    return $crewMember['job'] === 'Director';
+});
+
+
+$actors = $creditsData['cast'];
+
+// Process the recommendations response
+$recommendationsData = json_decode($recommendationsResponse, true);
+
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="Awards.css">
+    <style>
+        body {
+            background-color: #454848;
+            font-family: 'Roboto', sans-serif;
+            font-size: 10px;
+            box-sizing: border-box;
+            align-items: left;
+            justify-content: left;
+        }
+
+        body::-webkit-scrollbar
+        {
+            width: 5px;
+        }
+
+        body::-webkit-scrollbar-track {
+            box-shadow: inset 0 0 5px grey;
+            border-radius: 10px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: white;
+            border-radius: 10px;
+        }
+
+
+        section{
+            width: 100%;
+            height: 100%;
+            background-color: #1F1F1F;
+            align-items: center;
+            justify-content: center;
+            display: flex;
+        }
+
+
+        .container {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: column;
+        width: 100%;
+        max-width: 800px;
+        padding: 1.3rem;
+        padding-top: 10rem;
+        margin: 0 auto;
+        background-color: #2A2A2A;
+        color: #333;
+        overflow: auto;
+        justify-content: flex-end; /* Align buttons to the top right */
+    }
+
+
+
+        .container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .movie-poster {
+            position: static;
+            width: 400px; /* Adjust the width as desired */
+            height: auto;
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+
+        .movie-title {
+            color: lightgray;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 0;
+        }
+
+        .movie-description {
+            color: lightgray;
+            font-size: 1.5rem;
+            margin-top: 0;
+            padding-top: 1rem; /* Add padding between the title and description */
+            clear: left; /* Clear the float */
+            word-wrap: break-word; /* Wrap long text within the container */
+            padding-right: 5rem; /* Add padding to the right */
+            padding-left: 1rem; /* Add padding to the left */
+        }
+
+        .movie-cast {
+            margin-top: 2rem; /* Add margin between the description and cast */
+        }
+
+        .cast-name {
+            font-weight: bold;
+        }
+
+        .cast-photo {
+            max-width: 80px;
+            height: auto;
+            margin-top: 1rem;
+        }
+
+        .movie-roles {
+            margin-top: 2rem; /* Add margin between the cast and roles */
+        }
+
+        .roles-title {
+            font-weight: bold;
+        }
+
+        .dropdown {
+        padding-right: 1rem;
+        position: relative;
+        margin-bottom: 1rem;
+        }
+
+
+        .dropdown .dropdown-button {
+            background-color: red;
+            border-radius: 3px;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            outline: none;
+
+        }
+
+        .dropdown .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 500px;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-wrapper {
+            padding-right: 35rem;
+            display: flex;
+            flex-direction: row; /* Adjust alignment as needed */ */
+            margin-bottom: 1rem;
+            margin-top: 0.1rem;
+            margin-left: auto; /* Add this line to push the dropdowns to the right */
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr)); /* Adjusted to have 3 columns */
+            grid-gap: 100px;
+            margin-top: 10px;
+            padding: 20px;
+        }
+
+
+        .movie-description-box {
+            width: 100%;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+
+        @media screen and (max-width: 600px) {
+            .container {
+                padding: 1rem; /* Adjust padding for smaller screens */
+            }
+
+            .movie-poster {
+                width: 100%; /* Adjust the width to fit smaller screens */
+                margin-bottom: 1rem; /* Add margin below the poster */
+            }
+
+            .dropdown-button {
+                width: 100%; /* Adjust the width to occupy full container width */
+                text-align: left; /* Align button text to the left */
+            }
+        }
+
+        .rating-stars{
+            color: lightgray;
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            margin-top: 1rem;
+            width: 100%;
+            margin-right: .5rem;
+            margin-left: .5rem;
+            font-size: 2rem;
+            max-width: 200px;
+        }
+        .rating-percentage{
+            color: lightgray;
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+            margin-top: 1rem;
+            width: 100%;
+            margin-right:.5rem;
+            margin-left:.5rem;
+            font-size: 2rem;
+            max-width: 300px;
+        }
+
+        .rating{
+            max-width: 300px;
+            position: relative;
+        }
+
+        .recommendations-container {
+            margin-top: 2rem;
+        }
+
+        .recommendations-title {
+            color: lightgray;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 0;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr)); /* Adjusted to have 3 columns */
+            grid-gap: 50px;
+            margin-top: 1rem;
+        }
+
+        .recommendation-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .recommendation-poster {
+            width: 250px; /* Adjust the width as desired */
+            height: auto;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .recommendation-title { 
+            color: lightgray;
+            font-size: 2rem;
+            text-align: center;
+        }
+    </style>
+    <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+
+</head>
+<body>
+    <section>
+        
+        <div class="container">
+        <img class="movie-poster" src="https://image.tmdb.org/t/p/w500/<?php echo $movieData['poster_path']; ?>" alt="<?php echo $movieData['title']; ?> Poster">
+            <div class="dropdown-wrapper">
+                <div class="dropdown">
+                    <button class="dropdown-button">Cast</button>
+                    <div class="dropdown-content">
+                        <div class="grid-container">
+                            <?php foreach ($actors as $actor) { ?>
+                                <div class="grid-item">
+                                    <p class="cast-name"><?php echo $actor['name']; ?></p>   
+                                    <a href="actor_details.php?id=<?php echo $actor['id']; ?>"><img class="cast-photo" src="https://image.tmdb.org/t/p/w200/<?php echo $actor['profile_path']; ?>" alt="<?php echo $actor['name']; ?> Photo"></a>
+                                </div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dropdown">
+                    <button class="dropdown-button">Director</button>
+                    <div class="dropdown-content">
+                        <div class="grid-container">
+                        <?php foreach ($directors as $director) { ?>
+                            <div class="grid-item">
+                                <p class="cast-name"><?php echo $director['name']; ?></p>
+                                <a href="actor_details.php?id=<?php echo $director['id']; ?>"><img class="cast-photo" src="https://image.tmdb.org/t/p/w200/<?php echo $director['profile_path']; ?>" alt="<?php echo $director['name']; ?> Photo"></a>
+                            </div>
+                        <?php } ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+
+            <h1 class="movie-title"><?php echo $movieData['title']; ?></h1>
+
+            <?php
+                $rating = $movieData['vote_average'] * 10; // Get the rating and convert it to a percentage
+                $ratingStars = round($rating / 10); // Convert the rating to stars (1 to 5)
+                ?>
+
+            <div class="rating">
+                <p class="rating-percentage">User Ratings : <?php echo $rating; ?>%</p>
+                <div class="rating-stars">
+                    <?php
+                    for ($i = 1; $i <= 10; $i++) {
+                        if ($i <= $ratingStars) {
+                            echo '<i class="ion ion-ios-star"></i>';
+                        } else {
+                            echo '<i class="ion ion-ios-star-outline"></i>';
+                        }
+                    }
+                    ?>
+                </div>
+            </div>
+
+            <div class="movie-description-box">
+                <p class="movie-description"><?php echo $movieData['overview']; ?></p>
+            </div>
+
+            <div class="recommendations-container">
+                <h2 class="recommendations-title">Recommended Movies</h2>
+                <div class="recommendations-grid">
+                    <?php foreach ($recommendationsData['results'] as $recommendation) { ?>
+                        <div class="recommendation-item">
+                            <a href="movie_details.php?id=<?php echo $recommendation['id']; ?>">
+                                <img class="recommendation-poster" src="https://image.tmdb.org/t/p/w200/<?php echo $recommendation['poster_path']; ?>" alt="<?php echo $recommendation['title']; ?> Poster">
+                            </a>
+                            <p class="recommendation-title"><?php echo $recommendation['title']; ?></p>
+                        </div>
+                    <?php } ?>
+                </div>
+            </div>
+            
+
+            
+        </div>
+    </section>
+</body>
+</html>
+
+<?php
+// End of movie_details.php
+?>
+</body>
+</html>

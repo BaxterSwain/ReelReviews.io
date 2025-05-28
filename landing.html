@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>landing.php</title>
+    <link rel="stylesheet" href="Awards.css">
+</head>
+<body>
+<?php
+// Begin PHP logic from landing.php
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="Awards.css">
+    <style>
+        body {
+            background-color: #201f20;
+            font-family: 'Roboto', sans-serif;
+            font-size: 10px;
+            box-sizing: border-box;
+        }
+
+        body::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        body::-webkit-scrollbar-track {
+            box-shadow: inset 0 0 5px grey;
+            border-radius: 10px;
+        }
+
+        body::-webkit-scrollbar-thumb {
+            background: white;
+            border-radius: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: right;
+            background-color: #2A2A2A;
+        }
+
+        .container h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .carousel {
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: right;
+            padding-top: 10rem;
+            margin-bottom: 2rem;
+        }
+
+        .carousel h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: lightgray;
+        }
+
+        .description {
+            max-width: 400px;
+        }
+
+        .description h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .now-playing-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 0;
+        }
+
+        .now-playing-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        .now-playing-list li a {
+            color: #FFFFFF;
+            text-decoration: none;
+        }
+
+        .now-playing-list li a:hover {
+            text-decoration: underline;
+        }
+
+        .carousel-inner {
+            display: flex;
+            width: 100%;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+        }
+
+        .carousel-inner::-webkit-scrollbar {
+            background-color: #2A2A2A;
+            border-radius: 10px;
+        }
+
+        .carousel-item {
+            flex: 0 0 100%;
+            scroll-snap-align: start;
+            padding: 0 0.5rem;
+            box-sizing: border-box;
+        }
+
+        .carousel-item img {
+            width: 100%;
+            max-height: 600px;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .carousel-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .carousel-controls button {
+            border: none;
+            background-color: #282828;
+            color: #FFFFFF;
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            cursor: pointer;
+        }
+
+        .carousel-controls button:focus {
+            outline: none;
+        }
+
+        .movie-news {
+            background-color: #282828;
+            padding: 2rem;
+            color: #FFFFFF;
+            margin-left: 2rem;
+            width: 400px;
+        }
+
+        .movie-news h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .movie-news-item {
+            margin-bottom: 1rem;
+        }
+
+        .movie-news-item .title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: red;
+        }
+
+        .movie-news-item .description {
+            font-size: 0.9rem;
+        }
+
+        .hello-message {
+            position: absolute;
+            top: 65%;
+            right: 23%;
+            transform: translateY(-50%);
+            background-color: #2A2A2A;
+            color: #FFFFFF;
+            padding: 1rem;
+            font-size: 1.8rem;
+            text-align: center;
+            z-index: 999;
+            max-width: 350px;
+        }
+
+        .show-more-button{
+
+        }
+        .show-more-button button {
+            border-radius: 10px;
+            font-size: 1rem;
+            padding: .5rem .5rem;
+            background-color: red;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            text-decoration: none; /* Added text decoration */
+        }
+    </style>
+</head>
+<body>
+<?php
+    include 'header.php';
+
+    // TMDB API configuration
+    $apiKey = "b252ff5aa4b7f8186389adf7e546e29c";
+    $baseUrl = "https://api.themoviedb.org/3/";
+
+    // API endpoint and parameters for upcoming movies
+    $upcomingEndpoint = "movie/upcoming";
+    $parameters = array(
+        "api_key" => $apiKey,
+        "language" => "en-US",
+        "page" => 1
+    );
+
+    // Build the request URL for upcoming movies
+    $url = $baseUrl . $upcomingEndpoint . "?" . http_build_query($parameters);
+
+    // Send the GET request to the API
+    $context = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+    $response = @file_get_contents($url, false, $context);
+
+
+    if ($response !== false) {
+        // Decode the JSON response
+        $data = json_decode($response, true);
+
+        // Extract the movie results
+        $movies = $data["results"];
+    } else {
+        $movies = array(); // Set an empty array if the request fails
+    }
+    ?>
+
+    <div class="hello-message">
+        <p>Welcome to ReelReviews! Here, we are dedicated to providing you with comprehensive movie reviews and a platform to express your opinions about your favorite films. Inspired by the renowned IMDb, our website strives to deliver a user-friendly and informative movie reviewing experience. To ensure accurate and up-to-date movie data, we harness the power of the TMDb API, a reliable source for accessing extensive movie information. Whether you're searching for the latest blockbusters, hidden gems, or timeless classics, our website is your go-to destination for insightful movie reviews and recommendations. Join our community of movie enthusiasts and embark on an exciting cinematic journey with us.</p>
+    </div>
+
+    <div class="container">
+        <div class="carousel">
+            <h2>Upcoming Movies</h2>
+            <div class="carousel-inner">
+                <?php foreach ($movies as $movie) : ?>
+                    <div class="carousel-item">
+                        <a href="movie_details.php?id=<?php echo $movie['id']; ?>">
+                            <img src="https://image.tmdb.org/t/p/w500/<?php echo $movie['poster_path']; ?>" alt="Movie Poster">
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <div class="carousel-controls">
+                <button id="prevButton">Previous</button>
+                <button id="nextButton">Next</button>
+            </div>
+        </div>
+
+    <div class="movie-news">
+        <h2>Movie News</h2>
+        <div class="movie-news-list">
+            <?php
+            // Fetch movie news from the News API
+            $newsApiKey = "cec0cb6d162345e4853c5f98b08f78e8";
+            $newsUrl = "https://newsapi.org/v2/everything?q=movies&apiKey=" . $newsApiKey;
+
+            $context = stream_context_create([
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false
+                ]
+            ]);
+
+            $newsResponse = file_get_contents($newsUrl, false, $context);
+            $newsData = json_decode($newsResponse, true);
+
+            // Extract the articles
+            $articles = $newsData["articles"];
+
+            // Display the latest news articles
+            $displayedArticles = 3; // Number of articles to initially display
+            for ($i = 0; $i < $displayedArticles && $i < count($articles); $i++) {
+                $article = $articles[$i];
+                $title = $article["title"];
+                $description = $article["description"];
+                $url = $article["url"];
+                ?>
+                <div class="movie-news-item">
+                    <a href="<?php echo $url; ?>" class="title"><?php echo $title; ?></a>
+                    <p class="description"><?php echo $description; ?></p>
+                </div>
+                <?php
+            }
+
+            ?>
+        </div>
+        <div class="show-more-button">
+            <button id="showMoreButton">Show More</button>
+        </div>
+    </div>
+
+    </div>
+
+    <script>
+        const carouselInner = document.querySelector('.carousel-inner');
+        const prevButton = document.getElementById('prevButton');
+        const nextButton = document.getElementById('nextButton');
+        let currentOffset = 0;
+
+        prevButton.addEventListener('click', () => {
+            currentOffset += carouselInner.clientWidth;
+            carouselInner.scrollBy({
+                left: -carouselInner.clientWidth,
+                behavior: 'smooth'
+            });
+        });
+
+        nextButton.addEventListener('click', () => {
+            currentOffset -= carouselInner.clientWidth;
+            carouselInner.scrollBy({
+                left: carouselInner.clientWidth,
+                behavior: 'smooth'
+            });
+        });
+
+        const movieNewsList = document.querySelector('.movie-news-list');
+    const showMoreButton = document.getElementById('showMoreButton');
+    const articles = <?php echo json_encode($articles); ?>; // Get all the articles
+
+    const maxDisplayedArticles = 6; // Maximum number of articles to display
+
+    showMoreButton.addEventListener('click', () => {
+        const currentDisplayedArticles = movieNewsList.children.length;
+        const remainingArticles = articles.slice(currentDisplayedArticles);
+        const articlesToShow = remainingArticles.slice(0, maxDisplayedArticles);
+
+        for (const article of articlesToShow) {
+            const title = article.title;
+            const description = article.description;
+            const url = article.url;
+
+            const articleElement = document.createElement('div');
+            articleElement.classList.add('movie-news-item');
+            articleElement.innerHTML = `
+                <a href="${url}" class="title">${title}</a>
+                <p class="description">${description}</p>
+            `;
+            movieNewsList.appendChild(articleElement);
+        }
+
+        if (movieNewsList.children.length >= articles.length) {
+            showMoreButton.style.display = 'none';
+        }
+    });
+    </script>
+</body>
+</html>
+
+<?php
+// End of landing.php
+?>
+</body>
+</html>
